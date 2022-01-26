@@ -8,6 +8,7 @@
 
 const _ = require('lodash');
 const utils = require('@strapi/utils');
+const { convertPopulateQueryParams } = require('@strapi/utils/lib/convert-query-params');
 const { getService } = require('../utils');
 const { validateCreateUserBody, validateUpdateUserBody } = require('./validation/user');
 
@@ -123,7 +124,7 @@ module.exports = {
       ...ctx.request.body,
     };
 
-    const data = await getService('user').edit(user.id, updateData);
+    const data = await getService('user').edit({ id }, updateData);
     const sanitizedData = await sanitizeOutput(data, ctx);
 
     ctx.send(sanitizedData);
@@ -133,8 +134,11 @@ module.exports = {
    * Retrieve user records.
    * @return {Object|Array}
    */
-  async find(ctx, next, { populate } = {}) {
-    const users = await getService('user').fetchAll(ctx.query.filters, populate);
+  async find(ctx) {
+    const users = await getService('user').fetchAll(
+      ctx.query.filters,
+      convertPopulateQueryParams(ctx.query.populate || {})
+    );
 
     ctx.body = await Promise.all(users.map(user => sanitizeOutput(user, ctx)));
   },
@@ -145,7 +149,10 @@ module.exports = {
    */
   async findOne(ctx) {
     const { id } = ctx.params;
-    let data = await getService('user').fetch({ id });
+    let data = await getService('user').fetch(
+      { id },
+      convertPopulateQueryParams(ctx.query.populate || {})
+    );
 
     if (data) {
       data = await sanitizeOutput(data, ctx);
